@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Liste des Paliers</title>
+    <style>
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center;">Liste des Commissions</h1>
+    
+    <!-- Affichage du type de vendeur -->
+    <p style="text-align: center; font-weight: bold;">Type de Vendeur : {{ vendeur_type }}</p>   
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Vendeur</th>
+                <th>Qte Vendue 12Kg</th>
+                <th>Total en Dh</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for palier in paliers %}
+            <tr>
+                <td>{{ palier.date|date:"d/m/Y" }}</td>
+                <td>{{ palier.vendeur.nom }}</td>
+                <td>{{ palier.qte }}</td>
+                <td>{{ palier.total }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="3" style="text-align: right;">Total Commissions</td>
+                <td>{{ total_dh }}</td>
+            </tr>
+        </tfoot>
+    </table>
+</body>
+</html>

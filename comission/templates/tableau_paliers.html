@@ -1,0 +1,184 @@
+{% extends "base/base.html" %}
+
+{% load static %}
+{% block title %}Liste des Paliers{% endblock %}
+
+{% block css %}
+<style>
+/* Styles pour le conteneur du tableau */
+.table-container {
+    margin: 20px;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    background-color: #f9f9f9;
+    border: 1px solid #ddd; /* Bordure du conteneur du tableau */
+}
+
+/* Styles pour le tableau */
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid #ddd; /* Bordure autour du tableau */
+}
+
+.table th, .table td {
+    border: 1px solid #ddd; /* Bordure des cellules du tableau */
+    padding: 12px;
+    text-align: left;
+}
+
+.table th {
+    background-color: #007bff; /* Couleur de fond bleue */
+    color: #fff; /* Couleur du texte blanche */
+    font-weight: bold;
+    border-bottom: 2px solid #0056b3; /* Bordure inférieure des en-têtes */
+}
+
+.table tr:nth-child(even) {
+    background-color: #f2f2f2; /* Couleur de fond alternée pour les lignes */
+}
+
+.table tr:hover {
+    background-color: #e2e6ea; /* Couleur de fond au survol */
+}
+
+.table td {
+    font-size: 14px;
+}
+
+/* Styles pour le formulaire de filtrage */
+.form-container {
+    margin-bottom: 20px;
+    padding: 15px;
+    border-radius: 8px;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.form-label {
+    font-weight: bold;
+}
+
+.form-select, .form-control, .btn {
+    border-radius: 4px;
+    border: 1px solid #ced4da;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    border: none;
+    color: #fff;
+    padding: 10px 20px;
+    font-size: 16px;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    border: none;
+    color: #fff;
+    padding: 10px 20px;
+    font-size: 16px;
+}
+
+.btn-secondary:hover {
+    background-color: #5a6268;
+}
+</style>
+{% endblock css %}
+
+{% block toolbar %}
+<div id="kt_app_toolbar" class="app-toolbar" style="height: 50px">
+    <div id="kt_app_toolbar_container" class="app-container container-fluid d-flex flex-stack">
+        <div class="page-title d-flex flex-column justify-content-center flex-wrap me-3">
+            <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8 mt-8">
+                <li class="nav-item text-end">
+                    <a class="nav-link text-active-primary active" data-bs-toggle="tab"
+                       href="#kt_customer_view_overview_tab">Liste des Commissions</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="table-container"> 
+    <div class="form-container">
+        <form id="filter-form" method="get" action="{% url 'comission:tableau_paliers' %}">
+            <div class="mb-3">
+                <label for="vendeur_type" class="form-label">Type de vendeur</label>
+                <select id="vendeur_type" name="vendeur_type" class="form-select" required>
+                    <option value="agricole" {% if vendeur_type == 'agricole' %}selected{% endif %}>Agricole</option>
+                    <option value="pdv" {% if vendeur_type == 'pdv' %}selected{% endif %}>PDV</option>
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="date" class="form-label">Date</label>
+                <input type="date" id="date" name="date" class="form-control" value="{{ date|default_if_none:'' }}" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Filtrer</button>
+            <button type="submit" id="export-pdf" class="btn btn-secondary" formaction="{% url 'comission:export_pdf' %}">Exporter en PDF</button>
+        </form>
+    </div>
+
+    {% if paliers %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Vendeur</th>
+                <th>Qte Vendue 12Kg</th>
+                <th>Total en Dh</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for palier in paliers %}
+            <tr>
+                <td>{{ palier.date|date:"d/m/Y" }}</td>
+                <td>{{ palier.vendeur.nom }}</td>
+                <td>{{ palier.qte }}</td>
+                <td>{{ palier.total }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="3" style="text-align: right; font-weight: bold;">Total Commissions :</td>
+                <td style="font-weight: bold;">{{ total_dh }}</td>
+            </tr>
+        </tfoot>
+    </table>
+    {% else %}
+    <p>Aucun palier trouvé pour le type de vendeur et la date spécifiés.</p>
+    {% endif %}
+</div>
+{% endblock content %}
+
+{% block javascript %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const exportPdfButton = document.getElementById('export-pdf');
+        const paliersTable = document.querySelector('.table');
+        
+        if (!paliersTable || paliersTable.querySelector('tbody').children.length === 0) {
+            exportPdfButton.disabled = true;
+            exportPdfButton.title = 'Aucun palier à exporter';
+        }
+    });
+
+    document.getElementById('filter-form').addEventListener('submit', function(event) {
+        const vendeurType = document.getElementById('vendeur_type').value;
+        const date = document.getElementById('date').value;
+
+        if (!vendeurType || !date) {
+            event.preventDefault();
+            alert('Veuillez remplir tous les champs requis avant de soumettre le formulaire.');
+        }
+    });
+</script>
+{% endblock javascript %}

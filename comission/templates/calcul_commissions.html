@@ -1,0 +1,184 @@
+{% extends "base/base.html" %}
+
+{% load static %}
+{% block title %}Bienvenue sur {% endblock %}
+
+{% block css %}
+<style>
+/* Ajoutez vos styles CSS personnalisés ici */
+.form-container {
+    display: flex;
+    justify-content: space-between;
+}
+
+.left-side {
+    width: 45%;
+}
+
+.right-side {
+    width: 45%;
+}
+
+.submit-container {
+    margin-top: 20px;
+    text-align: left; /* Aligns content to the left */
+}
+
+.total-container {
+    margin-bottom: 10px;
+}
+</style>
+{% endblock css %}
+
+{% block toolbar %}
+<!-- Toolbar section for navigation and page title -->
+<div id="kt_app_toolbar" class="app-toolbar" style="height: 50px">
+    <!--begin::Toolbar container-->
+    <div id="kt_app_toolbar_container" class="app-container container-fluid d-flex flex-stack">
+        <!--begin::Page title-->
+        <div class="page-title d-flex flex-column justify-content-center flex-wrap me-3">
+            <!-- Navigation tabs for different views -->
+            <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8 mt-8">
+                <!-- Tab item for creating a palier -->
+                <li class="nav-item text-end">
+                    <a class="nav-link text-active-primary active" data-bs-toggle="tab"
+                       href="#kt_customer_view_overview_tab">Traitement des commissions</a>
+                </li>
+            </ul>
+        </div>
+        <!--end::Page title-->
+    </div>
+    <!--end::Toolbar container-->
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Main content area -->
+<div class="d-flex flex-column flex-column-fluid mt-4 mb-4">
+    <!--begin::Content container-->
+    <div id="kt_app_content_container">
+        <!-- Form for creating or calculating commissions -->
+        <form method="post" onsubmit="return showSaveMessage();">
+            {% csrf_token %}
+            
+            <div class="row mb-4 form-container">
+                <!-- Left Side: Vendor, Date, and Value -->
+                <div class="col-md-6 right-side">
+                    <div class="mb-3">
+                        <label for="vendeur_type" class="form-label">Type de Vendeur :</label>
+                        <select id="vendeur_type" name="vendeur_type" class="form-select">
+                            <option value="agricole" {% if vendeur_type == 'agricole' %}selected{% endif %}>Vendeur Agricole</option>
+                            <option value="pdv" {% if vendeur_type == 'pdv' %}selected{% endif %}>Vendeur PDV</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="combUtil" class="form-label">Vendeur :</label>
+                        <select id="combUtil" name="combUtil" class="form-select">
+                            <option value="" {% if not form_data.vendeur_id %}selected{% endif %}>Sélectionnez un vendeur</option>
+                            {% for vendeur in vendeurs %}
+                                <option value="{{ vendeur.external_id_v }}" {% if form_data.vendeur_id == vendeur.external_id_v %}selected{% endif %}>
+                                    {{ vendeur.nom }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="date" class="form-label">Date :</label>
+                        <input type="date" id="date" name="date" class="form-control" value="{{ form_data.date|default:'' }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="valeur" class="form-label">Valeur :</label>
+                        <input type="text" id="valeur" name="valeur" class="form-control" value="{{ form_data.valeur }}" required oninput="calculateResults()">
+                    </div>
+                    
+                    <!-- Submit button and total -->
+                    <div class="submit-container">
+                        <div class="total-container">
+                            <h2>Total : <span id="total">{{ total }}</span></h2>
+                        </div>
+                        <button type="submit" name="btnValid" class="btn btn-primary">Ajouter</button>
+                    </div>
+                </div>
+                
+                <!-- Right Side: Paliers -->
+                <div class="col-md-6 left-side">
+                    {% for i, palier in default_paliers.items %}
+                        <div class="mb-3">
+                            <h2>Palier {{ i }}</h2>
+                            <label for="palMin{{ i }}" class="form-label">Palier Inférieure :</label>
+                            <input type="text" id="palMin{{ i }}" name="palMin{{ i }}" class="form-control palMin" value="{{ form_data.paliers.i.min|default:palier.min }}" required oninput="calculateResults()">
+                        </div>
+                        <div class="mb-3">
+                            <label for="palMax{{ i }}" class="form-label">Palier Supérieure :</label>
+                            <input type="text" id="palMax{{ i }}" name="palMax{{ i }}" class="form-control palMax" value="{{ form_data.paliers.i.max|default:palier.max }}" required oninput="calculateResults()">
+                        </div>
+                        <div class="mb-3">
+                            <label for="com{{ i }}" class="form-label">Commission :</label>
+                            <input type="text" id="com{{ i }}" name="com{{ i }}" class="form-control com" value="{{ form_data.paliers.i.com|default:palier.com }}" required oninput="calculateResults()">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Remise Palier {{ i }}  :</label>
+                            <input type="text" id="resultat{{ i }}" class="form-control" readonly>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </form>
+    </div>
+    <!--end::Content container-->
+</div>
+{% endblock content %}
+
+{% block javascript %}
+<!-- JavaScript for handling dynamic content and loaders -->
+<script>
+    document.getElementById('vendeur_type').addEventListener('change', function() {
+        // Reload the page with the new vendeur type
+        const type = this.value;
+        window.location.search = `vendeur_type=${type}`;
+    });
+
+    document.getElementById('combUtil').addEventListener('change', function() {
+        // Clear the valeur field when the vendor selection changes
+        document.getElementById('valeur').value = '';
+        calculateResults();
+    });
+
+    function calculateResults() {
+        const value = parseFloat(document.getElementById('valeur').value) || 0;
+        const paliers = Array.from(document.querySelectorAll('.palMin')).map((minElem, index) => {
+            return {
+                min: parseFloat(minElem.value) || 0,
+                max: parseFloat(document.querySelectorAll('.palMax')[index].value) || 0,
+                com: parseFloat(document.querySelectorAll('.com')[index].value) || 0
+            };
+        });
+
+        let total = 0;
+        paliers.forEach((palier, index) => {
+            const min = palier.min;
+            const max = palier.max;
+            const com = palier.com;
+            let result = 0;
+            if (value > min) {
+                const rangeEnd = Math.min(value, max);
+                result = (rangeEnd - min) * com;
+                total += result;
+            }
+            document.getElementById(`resultat${index + 1}`).value = result.toFixed(2);
+        });
+        document.getElementById('total').innerText = total.toFixed(2);
+    }
+
+    function showSaveMessage() {
+        const vendeurSelect = document.getElementById('combUtil');
+        if (vendeurSelect.value === '') {
+            alert('Veuillez choisir un vendeur.');
+            return false; // Empêche la soumission du formulaire
+        }
+
+        alert('Les données ont été enregistrées avec succès.');
+        return true; // Permet la soumission du formulaire
+    }
+</script>
+{% endblock javascript %}

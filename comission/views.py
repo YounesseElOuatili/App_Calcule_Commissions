@@ -188,4 +188,4 @@ def export_pdf(request):
 from django.shortcuts import render
 
 def profile(request):
-    return render(request, 'profile.html')
+    return render(request, 'tableau_paliers.html')

@@ -6,7 +6,10 @@ from django.http import HttpResponse
 from django.template.loader import get_template
 from xhtml2pdf import pisa
 from io import BytesIO
+from django.contrib.auth.decorators import login_required
 
+
+@login_required(login_url='/login/')
 def calcul_commissions(request):
     # Choisir les vendeurs en fonction du type (Agricole ou PDV)
     vendeur_type = request.GET.get('vendeur_type', 'agricole')  # default to 'agricole'
@@ -106,6 +109,7 @@ from django.shortcuts import render
 from django.utils import timezone
 from .models import PalierAgricole, PalierPdv
 
+@login_required(login_url='/login/')
 def tableau_paliers(request):
     vendeur_type = request.GET.get('vendeur_type', 'agricole')  # default to 'agricole'
     date = request.GET.get('date', timezone.now().date())
@@ -135,6 +139,7 @@ from io import BytesIO
 from .models import PalierPdv, PalierAgricole
 from datetime import datetime
 
+@login_required(login_url='/login/')
 def export_pdf(request):
     vendeur_type = request.GET.get('vendeur_type')
     date_str = request.GET.get('date')
